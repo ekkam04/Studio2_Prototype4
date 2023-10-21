@@ -1,15 +1,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Threading.Tasks;
 
 public class TileManager : MonoBehaviour
 {
+    public bool crumbleTiles = false;
+
     [SerializeField] GameObject tileUndamaged;
     [SerializeField] GameObject tileSlightlyDamaged;
 
     [SerializeField] GameObject tileVeryDamaged;
     [SerializeField] GameObject[] tileVeryDamagedPieces;
+
+    List<Player> playersOnTile = new List<Player>();
 
     bool playerIsOnTile = false;
     bool isCrumbling = false;
@@ -27,6 +32,7 @@ public class TileManager : MonoBehaviour
 
     void Update()
     {
+        if (!crumbleTiles) return;
         if (playerIsOnTile && !isCrumbling)
         {
             timeSincePlayerSteppedOnTile += Time.deltaTime;
@@ -44,20 +50,30 @@ public class TileManager : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
+        if (!crumbleTiles) return;
         if (!GetComponent<MeshCollider>().enabled) return;
         if(other.gameObject.tag == "Player")
         {
-            DamageTile();
             playerIsOnTile = true;
+            playersOnTile.Add(other.gameObject.GetComponent<Player>());
+            DamageTile();
         }
     }
 
     private void OnCollisionExit(Collision other)
     {
+        if (!crumbleTiles) return;
         if (!GetComponent<MeshCollider>().enabled) return;
         if (other.gameObject.tag == "Player")
         {
+            Player player = other.gameObject.GetComponent<Player>();
             playerIsOnTile = false;
+            playersOnTile.Remove(player);
+
+            if (player.isJumping)
+            {
+                RumbleManager.instance.StopContinuousRumble(other.gameObject.GetComponent<PlayerInput>().devices[0] as Gamepad);
+            }
         }
     }
 
@@ -67,14 +83,27 @@ public class TileManager : MonoBehaviour
         {
             tileUndamaged.SetActive(false);
             tileSlightlyDamaged.SetActive(true);
+            foreach (Player player in playersOnTile)
+            {
+                RumbleManager.instance.RumblePulse(player.gameObject.GetComponent<PlayerInput>().devices[0] as Gamepad, 0.5f, 0.5f, 0.1f);
+            }
         }
         else if (tileSlightlyDamaged.activeSelf)
         {
             tileSlightlyDamaged.SetActive(false);
             tileVeryDamaged.SetActive(true);
+            foreach (Player player in playersOnTile)
+            {
+                RumbleManager.instance.RumblePulse(player.gameObject.GetComponent<PlayerInput>().devices[0] as Gamepad, 0.5f, 0.5f, 0.2f);
+            }
         }
         else if (tileVeryDamaged.activeSelf)
         {
+            foreach (Player player in playersOnTile)
+            {
+                RumbleManager.instance.StartRumbleContinuous(player.gameObject.GetComponent<PlayerInput>().devices[0] as Gamepad, 0.5f, 0.5f);
+            }
+
             // jitter the tile
             isCrumbling = true;
             for (int i = 0; i < 30; i++)
@@ -85,19 +114,31 @@ public class TileManager : MonoBehaviour
                 tileVeryDamaged.transform.position -= jitter;
             }
 
+            foreach (Player player in playersOnTile)
+            {
+                RumbleManager.instance.StopContinuousRumble(player.gameObject.GetComponent<PlayerInput>().devices[0] as Gamepad);
+            }
+
             GetComponent<MeshCollider>().enabled = false;
             foreach (GameObject piece in tileVeryDamagedPieces)
             {
                 // Add rigidbody to piece and enable mesh collider
                 Rigidbody rb = piece.AddComponent<Rigidbody>();
+                MeshCollider mc = piece.GetComponent<MeshCollider>();
+
                 Physics.IgnoreCollision(piece.GetComponent<Collider>(), FindObjectOfType<Player>().GetComponent<Collider>());
-                piece.GetComponent<MeshCollider>().enabled = true;
+                // mc.enabled = true;
+                // mc.isTrigger = true;
                 rb.AddExplosionForce(100f, transform.position, 10f);
                 rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
             }
-            await Task.Delay(10000);
-
-            gameObject.SetActive(false);
+            
+            Invoke("HideTile", 10f);
         }
+    }
+
+    void HideTile()
+    {
+        gameObject.SetActive(false);
     }
 }

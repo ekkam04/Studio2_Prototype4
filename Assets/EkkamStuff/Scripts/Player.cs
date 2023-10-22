@@ -219,6 +219,7 @@ public class Player : MonoBehaviour
             {
                 print("Position messed up, Trying to teleport back...");
                 transform.position = position;
+                rb.velocity = Vector3.zero;
             }
             await Task.Delay(10);
         }

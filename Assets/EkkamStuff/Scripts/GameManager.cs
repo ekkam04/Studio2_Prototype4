@@ -184,6 +184,18 @@ public class GameManager : MonoBehaviour
                 }
                 break;
 
+            case "LakshyaScene":
+
+                print("GameManager - Starting LakshyaScene");
+                InitializeLevel();
+                
+                // TileManager[] tileManagers = FindObjectsOfType<TileManager>();
+                // foreach (TileManager tileManager in tileManagers)
+                // {
+                //     tileManager.crumbleTiles = true;
+                // }
+                break;
+
             case "Lobby":
 
                 print("GameManager - Starting Lobby");
@@ -237,6 +249,8 @@ public class GameManager : MonoBehaviour
         foreach (Player player in players)
         {
             if (player == null) continue;
+            player.anim.SetBool("isJumping", false);
+            player.anim.SetBool("isMoving", false);
             player.allowMovement = false;
             player.isEliminated = false;
             player.rb.useGravity = false;
@@ -257,10 +271,10 @@ public class GameManager : MonoBehaviour
         switch (randomLevel)
         {
             case 0:
-                SceneManager.LoadScene("HexagonLevel");
+                SceneManager.LoadScene("LakshyaScene");
                 break;
             case 1:
-                SceneManager.LoadScene("HexagonLevel");
+                SceneManager.LoadScene("LakshyaScene");
                 break;
             default:
                 break;

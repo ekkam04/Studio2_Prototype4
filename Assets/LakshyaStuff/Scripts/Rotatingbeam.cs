@@ -22,7 +22,7 @@ void Start()
     {
          if (collision.gameObject.CompareTag("Player"))
         {
-          ReduceLives();
+        //   ReduceLives();
         }    
     }
 }

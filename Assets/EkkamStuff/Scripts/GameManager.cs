@@ -188,6 +188,12 @@ public class GameManager : MonoBehaviour
 
                 print("GameManager - Starting LakshyaScene");
                 InitializeLevel();
+
+                Rotatingbeam[] rotatingBeams = FindObjectsOfType<Rotatingbeam>();
+                foreach (Rotatingbeam rotatingBeam in rotatingBeams)
+                {
+                    rotatingBeam.enabled = true;
+                }
                 
                 // TileManager[] tileManagers = FindObjectsOfType<TileManager>();
                 // foreach (TileManager tileManager in tileManagers)

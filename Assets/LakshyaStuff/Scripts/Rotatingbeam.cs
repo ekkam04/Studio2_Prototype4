@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Rotatingbeam : MonoBehaviour
@@ -7,6 +8,7 @@ public class Rotatingbeam : MonoBehaviour
    public float rotationSpeed = 60.0f;
 
    public Rigidbody rb;
+   public float hitForce = 60f;
 
 void Start()
 {
@@ -22,7 +24,18 @@ void Start()
     {
          if (collision.gameObject.CompareTag("Player"))
         {
-        //   ReduceLives();
+            // collision.gameObject.GetComponent<Player>().rb.AddForce(Vector3.forward * hitForce);
+            print("Player hit");
+            if (rotationSpeed > 0)
+            {
+                // get pushed in opposite direction
+                collision.gameObject.GetComponent<Player>().rb.AddForce(Vector3.back * hitForce);
+            }
+            else
+            {
+                // get pushed in opposite direction
+                collision.gameObject.GetComponent<Player>().rb.AddForce(Vector3.forward * hitForce);
+            }
         }    
     }
 }

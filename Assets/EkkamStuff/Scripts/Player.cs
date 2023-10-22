@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using TMPro;
 
 public class Player : MonoBehaviour
 {
-    Rigidbody rb;
-    Animator anim;
+    public Rigidbody rb;
+    public Animator anim;
 
     public int playerNumber;
     public bool allowMovement = true;
     public bool isReady = false;
+    public bool isEliminated = false;
 
     public Transform orientation;
     public Transform cameraObj;
@@ -39,10 +41,13 @@ public class Player : MonoBehaviour
     float initialJumpVelocity;
     float jumpStartTime;
 
+    public TMP_Text readyText;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
+        anim.SetTrigger("roll");
 
         cameraObj = GameObject.FindObjectOfType<Camera>().transform;
 
@@ -50,6 +55,8 @@ public class Player : MonoBehaviour
         initialJumpVelocity = Mathf.Abs(gravity) * jumpDuration;
 
         DontDestroyOnLoad(this);
+
+        UpdateReadyText();
     }
 
     void Update()
@@ -80,7 +87,6 @@ public class Player : MonoBehaviour
         {
             isGrounded = true;
             rb.drag = groundDrag;
-            print("Grounded");
 
             if (!hasLanded)
             {
@@ -98,7 +104,6 @@ public class Player : MonoBehaviour
         RaycastHit hit2;
         if (Physics.Raycast(transform.position + new Vector3(0, 0.5f, 0), Vector3.down, out hit2, groundDistanceLandingOffset + 0.1f))
         {
-            print("Almost grounded");
             if (!isGrounded && !isJumping)
             {
                 anim.SetBool("isJumping", false);
@@ -140,9 +145,13 @@ public class Player : MonoBehaviour
 
     public void OnJump(InputAction.CallbackContext context)
     {
-        // if (!allowMovement) return;
         if (context.started)
         {
+            if (GameManager.instance.gameStarted == false) {
+                ToggleReady();
+                return;
+            }
+
             if (!isGrounded && allowDoubleJump && !doubleJumped)
             {
                 doubleJumped = true;
@@ -153,6 +162,15 @@ public class Player : MonoBehaviour
                 doubleJumped = false;
                 StartJump(jumpHeightApex, jumpDuration);
             }
+        }
+    }
+
+    public void OnLeave(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            if (GameManager.instance.gameStarted) return;
+            GameManager.instance.RemovePlayer(GetComponent<PlayerInput>());
         }
     }
 
@@ -206,13 +224,42 @@ public class Player : MonoBehaviour
         }
     }
 
+    public void GetEliminated()
+    {
+        allowMovement = false;
+        isEliminated = true;
+        rb.velocity = Vector3.zero;
+    }
+
+    public void ToggleReady()
+    {
+        isReady = !isReady;
+        anim.SetTrigger("roll");
+        UpdateReadyText();
+        GameManager.instance.PlayerPressedReady();
+    }
+
+    public void UpdateReadyText()
+    {
+        if (isReady)
+        {
+            readyText.text = "Ready";
+            readyText.color = new Color32(0, 190, 0, 255);
+        }
+        else
+        {
+            readyText.text = "Not Ready";
+            readyText.color = new Color32(190, 0, 0, 255);
+        }
+    }
+
     public void ChangePlayerColor(Color32 color)
     {
-        foreach (Transform child in transform)
+        foreach (Renderer child in GetComponentsInChildren<Renderer>(includeInactive: true))
         {
             if (child.GetComponent<Renderer>() != null)
             {
-                Material playerMaterial = new Material(child.GetComponent<Renderer>().material);
+                Material playerMaterial = new Material(child.material);
                 child.GetComponent<Renderer>().material = playerMaterial;
                 playerMaterial.SetColor("_Color01", color);
                 playerMaterial.SetColor("_Color02", color);

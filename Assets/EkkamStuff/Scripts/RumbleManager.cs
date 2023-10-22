@@ -55,6 +55,11 @@ public class RumbleManager : MonoBehaviour
     }
 
     private void OnApplicationQuit() {
+        StopAllRumble();
+    }
+
+    public void StopAllRumble()
+    {
         foreach (Gamepad pad in Gamepad.all)
         {
             pad.SetMotorSpeeds(0, 0);

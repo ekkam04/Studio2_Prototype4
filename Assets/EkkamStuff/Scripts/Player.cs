@@ -1,23 +1,32 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using TMPro;
 
 public class Player : MonoBehaviour
 {
-    Rigidbody rb;
-    Animator anim;
+    public Rigidbody rb;
+    public Animator anim;
+
+    public int playerNumber;
+    public bool allowMovement = true;
+    public bool isReady = false;
+    public bool isEliminated = false;
 
     public Transform orientation;
     public Transform cameraObj;
     public float rotationSpeed = 3f;
-    float horizontalInput;
-    float verticalInput;
+    public float horizontalInput = 0f;
+    public float verticalInput = 0f;
     Vector3 moveDirection;
     public float speed = 1.0f;
     public float maxSpeed = 5.0f;
     public float groundDrag = 3f;
 
     public float groundDistance = 0.2f;
+    public float groundDistanceLandingOffset = 0.2f;
     public bool isGrounded;
     public bool isJumping;
     public bool allowDoubleJump;
@@ -32,12 +41,22 @@ public class Player : MonoBehaviour
     float initialJumpVelocity;
     float jumpStartTime;
 
+    public TMP_Text readyText;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
+        anim.SetTrigger("roll");
 
-        ChangePlayerColor(new Color32(0, 0, 255, 255));
+        cameraObj = GameObject.FindObjectOfType<Camera>().transform;
+
+        gravity = -2 * jumpHeightApex / (jumpDuration * jumpDuration);
+        initialJumpVelocity = Mathf.Abs(gravity) * jumpDuration;
+
+        DontDestroyOnLoad(this);
+
+        UpdateReadyText();
     }
 
     void Update()
@@ -46,9 +65,6 @@ public class Player : MonoBehaviour
         // Vector3 viewDirection = transform.position - new Vector3(cameraObj.position.x, transform.position.y, cameraObj.position.z);
         // orientation.forward = viewDirection.normalized;
         orientation.forward = Vector3.zero;
-
-        horizontalInput = Input.GetAxis("Horizontal");
-        verticalInput = Input.GetAxis("Vertical");
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
          
@@ -66,8 +82,8 @@ public class Player : MonoBehaviour
         ControlSpeed();
 
         // Ground check
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position + new Vector3(0, 0.5f, 0), Vector3.down, out hit, groundDistance + 0.1f))
+        RaycastHit hit1;
+        if (Physics.Raycast(transform.position + new Vector3(0, 0.5f, 0), Vector3.down, out hit1, groundDistance + 0.1f))
         {
             isGrounded = true;
             rb.drag = groundDrag;
@@ -75,6 +91,7 @@ public class Player : MonoBehaviour
             if (!hasLanded)
             {
                 hasLanded = true;
+                anim.SetBool("isJumping", false);
             }
         }
         else
@@ -84,18 +101,12 @@ public class Player : MonoBehaviour
         }
         Debug.DrawRay(transform.position + new Vector3(0, 1, 0), Vector3.down * (groundDistance + 0.1f), Color.red);
 
-        // Jump
-        if (Input.GetKeyDown(KeyCode.Space))
+        RaycastHit hit2;
+        if (Physics.Raycast(transform.position + new Vector3(0, 0.5f, 0), Vector3.down, out hit2, groundDistanceLandingOffset + 0.1f))
         {
-            if (!isGrounded && allowDoubleJump && !doubleJumped)
+            if (!isGrounded && !isJumping)
             {
-                doubleJumped = true;
-                StartJump(jumpHeightApex, jumpDuration);
-            }
-            else if (isGrounded)
-            {
-                doubleJumped = false;
-                StartJump(jumpHeightApex, jumpDuration);
+                anim.SetBool("isJumping", false);
             }
         }
 
@@ -120,6 +131,46 @@ public class Player : MonoBehaviour
         else
         {
             rb.AddForce(Vector3.down * -gravity * downwardsGravityMultiplier, ForceMode.Acceleration);
+            print("Gravity: " + gravity);
+        }
+    }
+
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        if (!allowMovement) return;
+        Vector2 input = context.ReadValue<Vector2>();
+        horizontalInput = input.x;
+        verticalInput = input.y;
+    }
+
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            if (GameManager.instance.gameStarted == false) {
+                ToggleReady();
+                return;
+            }
+
+            if (!isGrounded && allowDoubleJump && !doubleJumped)
+            {
+                doubleJumped = true;
+                StartJump(jumpHeightApex, jumpDuration);
+            }
+            else if (isGrounded)
+            {
+                doubleJumped = false;
+                StartJump(jumpHeightApex, jumpDuration);
+            }
+        }
+    }
+
+    public void OnLeave(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            if (GameManager.instance.gameStarted) return;
+            GameManager.instance.RemovePlayer(GetComponent<PlayerInput>());
         }
     }
 
@@ -156,13 +207,59 @@ public class Player : MonoBehaviour
         rb.velocity = Vector3.up * initialJumpVelocity;
     }
 
+    public async void Teleport(Vector3 position)
+    {
+        transform.position = position;
+        await Task.Delay(100);
+
+        // Workaround for teleporting not working sometimes
+        for (int i = 0; i < 50; i++)
+        {
+            if (transform.position.x > position.x + 0.1f || transform.position.x < position.x - 0.1f || transform.position.z > position.z + 0.1f || transform.position.z < position.z - 0.1f)
+            {
+                print("Position messed up, Trying to teleport back...");
+                transform.position = position;
+            }
+            await Task.Delay(10);
+        }
+    }
+
+    public void GetEliminated()
+    {
+        allowMovement = false;
+        isEliminated = true;
+        rb.velocity = Vector3.zero;
+    }
+
+    public void ToggleReady()
+    {
+        isReady = !isReady;
+        anim.SetTrigger("roll");
+        UpdateReadyText();
+        GameManager.instance.PlayerPressedReady();
+    }
+
+    public void UpdateReadyText()
+    {
+        if (isReady)
+        {
+            readyText.text = "Ready";
+            readyText.color = new Color32(0, 190, 0, 255);
+        }
+        else
+        {
+            readyText.text = "Not Ready";
+            readyText.color = new Color32(190, 0, 0, 255);
+        }
+    }
+
     public void ChangePlayerColor(Color32 color)
     {
-        foreach (Transform child in transform)
+        foreach (Renderer child in GetComponentsInChildren<Renderer>(includeInactive: true))
         {
             if (child.GetComponent<Renderer>() != null)
             {
-                Material playerMaterial = new Material(child.GetComponent<Renderer>().material);
+                Material playerMaterial = new Material(child.material);
                 child.GetComponent<Renderer>().material = playerMaterial;
                 playerMaterial.SetColor("_Color01", color);
                 playerMaterial.SetColor("_Color02", color);

@@ -20,6 +20,8 @@ public class TileManager : MonoBehaviour
     bool isCrumbling = false;
     float timeSincePlayerSteppedOnTile = 0f;
 
+    MeshCollider meshCollider;
+
     void Start()
     {
         tileVeryDamaged.SetActive(false);
@@ -28,12 +30,20 @@ public class TileManager : MonoBehaviour
 
         // Rotate hexagon tile randomly to make the cracks look more natural
         transform.Rotate(0, 0, Random.Range(0, 6) * 60);
+
+        foreach (MeshCollider collider in GetComponentsInChildren<MeshCollider>())
+        {
+            if (collider.name == "Collider")
+            {
+                meshCollider = collider;
+            }
+        }
     }
 
     void Update()
     {
         if (!crumbleTiles) return;
-        if (playerIsOnTile && !isCrumbling)
+        if ((playerIsOnTile || playersOnTile.Count > 0) && !isCrumbling)
         {
             timeSincePlayerSteppedOnTile += Time.deltaTime;
             if (timeSincePlayerSteppedOnTile >= 1f)
@@ -50,20 +60,28 @@ public class TileManager : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
-        if (!crumbleTiles) return;
-        if (!GetComponent<MeshCollider>().enabled) return;
+        // if collision contact is with child called "Collider", continue, else return
+        foreach (ContactPoint collider in other.contacts)
+        {
+            if (collider.thisCollider.name != "Collider")
+            {
+                return;
+            }
+        }
+
+        if (!meshCollider.enabled) return;
         if(other.gameObject.tag == "Player")
         {
             playerIsOnTile = true;
             playersOnTile.Add(other.gameObject.GetComponent<Player>());
+            if (!crumbleTiles) return;
             DamageTile();
         }
     }
 
     private void OnCollisionExit(Collision other)
     {
-        if (!crumbleTiles) return;
-        if (!GetComponent<MeshCollider>().enabled) return;
+        if (!meshCollider.enabled) return;
         if (other.gameObject.tag == "Player")
         {
             Player player = other.gameObject.GetComponent<Player>();
@@ -119,16 +137,12 @@ public class TileManager : MonoBehaviour
                 RumbleManager.instance.StopContinuousRumble(player.gameObject.GetComponent<PlayerInput>().devices[0] as Gamepad);
             }
 
+            meshCollider.enabled = false;
             GetComponent<MeshCollider>().enabled = false;
             foreach (GameObject piece in tileVeryDamagedPieces)
             {
-                // Add rigidbody to piece and enable mesh collider
+                // Add rigidbody to piece
                 Rigidbody rb = piece.AddComponent<Rigidbody>();
-                MeshCollider mc = piece.GetComponent<MeshCollider>();
-
-                Physics.IgnoreCollision(piece.GetComponent<Collider>(), FindObjectOfType<Player>().GetComponent<Collider>());
-                // mc.enabled = true;
-                // mc.isTrigger = true;
                 rb.AddExplosionForce(100f, transform.position, 10f);
                 rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
             }

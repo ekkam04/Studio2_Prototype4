@@ -50,11 +50,20 @@ public class LevelManager : MonoBehaviour
                 playersEliminated++;
             }
         }
-        if (playersEliminated == players.Length - 1 && roundStarted)
+        if (
+            (playersEliminated == players.Length - 1 && GameManager.instance.modeText.text == "Solo" && roundStarted) ||
+            (playersEliminated == players.Length - 2 && GameManager.instance.modeText.text == "Duos" && roundStarted)
+           )
         {
             roundStarted = false;
             EndRound();
-            print("Round ended");
+            print("Round ended with a winner");
+        }
+        else if (playersEliminated == players.Length && roundStarted)
+        {
+            roundStarted = false;
+            EndRound();
+            print("Round ended in a draw");
         }
     }
 

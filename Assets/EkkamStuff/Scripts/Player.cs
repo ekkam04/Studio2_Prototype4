@@ -14,6 +14,7 @@ public class Player : MonoBehaviour
     public bool allowMovement = true;
     public bool isReady = false;
     public bool isEliminated = false;
+    public bool allowFall = true;
 
     public Transform orientation;
     public Transform cameraObj;
@@ -62,13 +63,17 @@ public class Player : MonoBehaviour
     void Update()
     {
         // Movement
+        if (!allowMovement)
+        {
+            transform.rotation = Quaternion.Euler(0, 0, 0);
+        }
         // Vector3 viewDirection = transform.position - new Vector3(cameraObj.position.x, transform.position.y, cameraObj.position.z);
         // orientation.forward = viewDirection.normalized;
         orientation.forward = Vector3.zero;
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
          
-        if(moveDirection != Vector3.zero)
+        if(moveDirection != Vector3.zero && allowMovement)
         {
             transform.forward = Vector3.Slerp(transform.forward, moveDirection.normalized, Time.deltaTime * rotationSpeed);
             anim.SetBool("isMoving", true);
@@ -130,6 +135,7 @@ public class Player : MonoBehaviour
         }
         else
         {
+            if (!allowFall) return;
             rb.AddForce(Vector3.down * -gravity * downwardsGravityMultiplier, ForceMode.Acceleration);
             print("Gravity: " + gravity);
         }
@@ -147,7 +153,7 @@ public class Player : MonoBehaviour
     {
         if (context.started)
         {
-            if (GameManager.instance.gameStarted == false) {
+            if (GameManager.instance.gameStarted == false && GameManager.instance.loadingLevel == false) {
                 ToggleReady();
                 return;
             }
@@ -176,6 +182,7 @@ public class Player : MonoBehaviour
 
     void MovePlayer()
     {
+        if (!allowMovement) return;
         // Calculate movement direction
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
@@ -220,6 +227,8 @@ public class Player : MonoBehaviour
                 print("Position messed up, Trying to teleport back...");
                 transform.position = position;
                 rb.velocity = Vector3.zero;
+                anim.SetBool("isJumping", false);
+                anim.SetBool("isMoving", false);
             }
             await Task.Delay(10);
         }
@@ -234,6 +243,7 @@ public class Player : MonoBehaviour
 
     public void ToggleReady()
     {
+        if (GameManager.instance.loadingLevel) return;
         isReady = !isReady;
         anim.SetTrigger("roll");
         UpdateReadyText();

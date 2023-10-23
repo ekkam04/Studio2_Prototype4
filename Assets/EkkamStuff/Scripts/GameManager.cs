@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Threading.Tasks;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -16,9 +17,14 @@ public class GameManager : MonoBehaviour
     public GameObject[] joinPrompts = new GameObject[4];
 
     LevelManager levelManager;
+    public bool loadingLevel = false;
 
     public RectTransform[] blackPanels;
     public RectTransform countdownText;
+    public TMP_Text modeText;
+    public GameObject lobbyPanel;
+    public GameObject roundEndPanel;
+    public TMP_Text roundEndText;
 
     void Start()
     {
@@ -34,13 +40,13 @@ public class GameManager : MonoBehaviour
         print("GameManager - Start");
     }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            StartRound();
-        }
-    }
+    // void Update()
+    // {
+    //     if (Input.GetKeyDown(KeyCode.E))
+    //     {
+    //         StartRound();
+    //     }
+    // }
 
     void Awake()
     {
@@ -69,31 +75,36 @@ public class GameManager : MonoBehaviour
     {
         Player player = playerInput.gameObject.GetComponent<Player>();
         player.allowMovement = false;
-        // add player to players array in the next available slot
         for (int i = 0; i < players.Length; i++)
         {
             if (players[i] == null)
             {
                 players[i] = player;
+                player.playerNumber = i + 1;
+                if (modeText.text == "Solo")
+                {
+                    player.ChangePlayerColor(playerColors[i]);
+                }
+                else
+                {
+                    player.ChangePlayerColor(teamPlayerColors[i]);
+                }
+                player.Teleport(playerSpawnPoints[i].position);
+                if (GameObject.Find("JoinPrompts") != null)
+                {
+                    foreach (GameObject joinPrompt in joinPrompts)
+                    {
+                        if (joinPrompt.name.Contains("_" + (i + 1)))
+                        {
+                            joinPrompt.SetActive(false);
+                        }
+                    }
+                }
                 break;
             }
         }
-        player.playerNumber = GetNumberOfPlayers();
-        player.ChangePlayerColor(playerColors[GetNumberOfPlayers() - 1]);
-        if (GameObject.Find("JoinPrompts") != null)
-        {
-            foreach (GameObject joinPrompt in joinPrompts)
-            {
-                if (joinPrompt.name.Contains("_" + GetNumberOfPlayers()))
-                {
-                    joinPrompt.SetActive(false);
-                }
-            }
-        }  
 
         await Task.Delay(100);
-
-        player.Teleport(playerSpawnPoints[player.playerNumber - 1].position);
         print("Spawned player " + player.playerNumber + " at " + playerSpawnPoints[GetNumberOfPlayers() - 1].position);
     }
 
@@ -101,23 +112,22 @@ public class GameManager : MonoBehaviour
     {
         print("GameManager - Removing player " + playerInput.gameObject.GetComponent<Player>().playerNumber);
         Player player = playerInput.gameObject.GetComponent<Player>();
-        // remove player from players array
         foreach (Player p in players)
         {
             if (p == player)
             {
                 players[p.playerNumber - 1] = null;
-                break;
-            }
-        }
-        if (GameObject.Find("JoinPrompts") != null)
-        {
-            foreach (GameObject joinPrompt in joinPrompts)
-            {
-                if (joinPrompt.name.Contains("_" + GetNumberOfPlayers()))
+                if (GameObject.Find("JoinPrompts") != null)
                 {
-                    joinPrompt.SetActive(true);
+                    foreach (GameObject joinPrompt in joinPrompts)
+                    {
+                        if (joinPrompt.name.Contains("_" + p.playerNumber))
+                        {
+                            joinPrompt.SetActive(true);
+                        }
+                    }
                 }
+                break;
             }
         }
         Destroy(playerInput.gameObject);
@@ -128,6 +138,8 @@ public class GameManager : MonoBehaviour
         print("GameManager - Scene loaded: " + scene.name);
         SendAllPlayersToSpawn();
         HideBlackPanels();
+        roundEndPanel.SetActive(false);
+        loadingLevel = false;
 
         if (GameObject.Find("LevelManager") != null)
         {
@@ -194,12 +206,6 @@ public class GameManager : MonoBehaviour
                 {
                     rotatingBeam.enabled = true;
                 }
-                
-                // TileManager[] tileManagers = FindObjectsOfType<TileManager>();
-                // foreach (TileManager tileManager in tileManagers)
-                // {
-                //     tileManager.crumbleTiles = true;
-                // }
                 break;
 
             case "Lobby":
@@ -207,13 +213,28 @@ public class GameManager : MonoBehaviour
                 print("GameManager - Starting Lobby");
                 gameStarted = false;
                 if (GameObject.Find("JoinPrompts") != null) joinPrompts = GameObject.FindGameObjectsWithTag("JoinPrompt");
+                for (int i = 0; i < players.Length; i++)
+                {
+                    if (players[i] == null) continue;
+                    if (GameObject.Find("JoinPrompts") != null)
+                    {
+                        foreach (GameObject joinPrompt in joinPrompts)
+                        {
+                            if (joinPrompt.name.Contains("_" + (i + 1)))
+                            {
+                                joinPrompt.SetActive(false);
+                            }
+                        }
+                    }
+                }
+                lobbyPanel.SetActive(true);
                 foreach (Player player in players)
                 {
                     if (player == null) continue;
                     player.allowMovement = false;
+                    player.allowFall = true;
                     player.isEliminated = false;
                     player.isReady = false;
-                    player.rb.useGravity = true;
                     player.UpdateReadyText();
                     player.readyText.gameObject.SetActive(true);
                     player.gameObject.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
@@ -233,33 +254,106 @@ public class GameManager : MonoBehaviour
         {
             if (player == null) continue;
             player.allowMovement = true;
+            player.allowFall = true;
             player.gameObject.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-            player.rb.useGravity = true;
         }
     }
 
     void StartRound()
     {
         ShowBlackPanels();
+        lobbyPanel.SetActive(false);
         foreach (Player player in players)
         {
             if (player == null) continue;
-            player.allowMovement = false;
+            player.readyText.gameObject.SetActive(false);
         }
         Invoke("LoadRandomLevel", 2f);
     }
 
-    public void EndRound()
+    public async void EndRound()
     {
+        roundEndPanel.SetActive(true);
+
+        bool winnerFound = false;
+        foreach (Player player in players)
+        {
+            if (player == null) continue;
+            if (!player.isEliminated && modeText.text == "Solo")
+            {
+                roundEndText.color = playerColors[player.playerNumber - 1];
+                player.allowFall = false;
+                winnerFound = true;
+                switch (player.playerNumber)
+                {
+                    case 1:
+                        roundEndText.text = "Red Wins!";
+                        break;
+                    case 2:
+                        roundEndText.text = "Green Wins!";
+                        break;
+                    case 3:
+                        roundEndText.text = "Blue Wins!";
+                        break;
+                    case 4:
+                        roundEndText.text = "Yellow Wins!";
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if (!player.isEliminated && modeText.text == "Duos")
+            {
+                player.allowFall = false;
+                if (winnerFound) continue;
+                winnerFound = true;
+                switch (player.playerNumber)
+                {
+                    case 1:
+                        roundEndText.color = teamPlayerColors[0];
+                        roundEndText.text = "Red Team Wins!";
+                        break;
+                    case 2:
+                        roundEndText.color = teamPlayerColors[0];
+                        roundEndText.text = "Red Team Wins!";
+                        break;
+                    case 3:
+                        roundEndText.color = teamPlayerColors[2];
+                        roundEndText.text = "Blue Team Wins!";
+                        break;
+                    case 4:
+                        roundEndText.color = teamPlayerColors[2];
+                        roundEndText.text = "Blue Team Wins!";
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        if (!winnerFound)
+        {
+            roundEndText.color = Color.white;
+            roundEndText.text = "Draw!";
+        }
+
+        LeanTween.scale(roundEndText.gameObject, new Vector3(0f, 0f, 0f), 0f);
+        // LeanTween.scale(roundEndText.gameObject, new Vector3(0.5f, 0.5f, 0.5f), 0.5f).setEaseOutCubic();
+        // await Task.Delay(500);
+        LeanTween.scale(roundEndText.gameObject, new Vector3(1f, 1f, 1f), 0.5f).setEaseInCubic();   
+
+        await Task.Delay(3000);
+        LeanTween.scale(roundEndText.gameObject, new Vector3(0f, 0f, 0f), 0.5f).setEaseInCubic();
+
         ShowBlackPanels();
         foreach (Player player in players)
         {
             if (player == null) continue;
+            player.allowFall = false;
             player.anim.SetBool("isJumping", false);
             player.anim.SetBool("isMoving", false);
             player.allowMovement = false;
             player.isEliminated = false;
-            player.rb.useGravity = false;
             player.gameObject.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
             player.rb.velocity = Vector3.zero;
         }
@@ -277,7 +371,7 @@ public class GameManager : MonoBehaviour
         switch (randomLevel)
         {
             case 0:
-                SceneManager.LoadScene("LakshyaScene");
+                SceneManager.LoadScene("HexagonLevel");
                 break;
             case 1:
                 SceneManager.LoadScene("LakshyaScene");
@@ -298,27 +392,50 @@ public class GameManager : MonoBehaviour
         {
             if (player == null) continue;
             player.Teleport(playerSpawnPoints[player.playerNumber - 1].position);
-            player.readyText.gameObject.SetActive(false);
-
         }
     }
 
     public void PlayerPressedReady()
     {
-        if (GetNumberOfPlayers() > 1)
+        if (loadingLevel) return;
+        if (modeText.text == "Solo")
         {
-            bool allPlayersReady = true;
-            foreach (Player p in players)
+            if (GetNumberOfPlayers() > 1)
             {
-                if (p == null) continue;
-                if (!p.isReady)
+                bool allPlayersReady = true;
+                foreach (Player p in players)
                 {
-                    allPlayersReady = false;
+                    if (p == null) continue;
+                    if (!p.isReady)
+                    {
+                        allPlayersReady = false;
+                    }
+                }
+                if (allPlayersReady)
+                {
+                    loadingLevel = true;
+                    Invoke("StartRound", 1f);
                 }
             }
-            if (allPlayersReady)
+        }
+        else
+        {
+            if (GetNumberOfPlayers() > 3)
             {
-                StartRound();
+                bool allPlayersReady = true;
+                foreach (Player p in players)
+                {
+                    if (p == null) continue;
+                    if (!p.isReady)
+                    {
+                        allPlayersReady = false;
+                    }
+                }
+                if (allPlayersReady)
+                {
+                    loadingLevel = true;
+                    Invoke("StartRound", 1f);
+                }
             }
         }
     }
@@ -363,6 +480,36 @@ public class GameManager : MonoBehaviour
             numberOfPlayers++;
         }
         return numberOfPlayers;
+    }
+
+    public void ToggleMode()
+    {
+        // Unready all players
+        foreach (Player player in players)
+        {
+            if (player == null) continue;
+            player.isReady = false;
+            player.UpdateReadyText();
+        }
+
+        if (modeText.text == "Solo")
+        {
+            modeText.text = "Duos";
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] == null) continue;
+                players[i].ChangePlayerColor(teamPlayerColors[i]);
+            }
+        }
+        else
+        {
+            modeText.text = "Solo";
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] == null) continue;
+                players[i].ChangePlayerColor(playerColors[i]);
+            }
+        }
     }
 
     void OnApplicationQuit() {

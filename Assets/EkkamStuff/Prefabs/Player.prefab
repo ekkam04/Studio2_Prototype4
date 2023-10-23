@@ -13215,6 +13215,7 @@ MonoBehaviour:
   allowMovement: 1
   isReady: 0
   isEliminated: 0
+  allowFall: 1
   orientation: {fileID: 6828008467598740161}
   cameraObj: {fileID: 0}
   rotationSpeed: 10
@@ -13350,7 +13351,7 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8378329590080521423}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 2e5b8b4a07fe2034e944a44c12238946, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -13362,7 +13363,7 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.315938
+  m_Radius: 0.46
   m_Height: 1.8276064
   m_Direction: 1
   m_Center: {x: 0, y: 0.90404856, z: 0}

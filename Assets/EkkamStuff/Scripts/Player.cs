@@ -66,6 +66,7 @@ public class Player : MonoBehaviour
         if (!allowMovement)
         {
             transform.rotation = Quaternion.Euler(0, 0, 0);
+
         }
         // Vector3 viewDirection = transform.position - new Vector3(cameraObj.position.x, transform.position.y, cameraObj.position.z);
         // orientation.forward = viewDirection.normalized;
@@ -220,7 +221,7 @@ public class Player : MonoBehaviour
         await Task.Delay(100);
 
         // Workaround for teleporting not working sometimes
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 100; i++)
         {
             if (transform.position.x > position.x + 0.1f || transform.position.x < position.x - 0.1f || transform.position.z > position.z + 0.1f || transform.position.z < position.z - 0.1f)
             {

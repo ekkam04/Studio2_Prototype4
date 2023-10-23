@@ -1085,6 +1085,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: GameManager
       objectReference: {fileID: 0}
+    - target: {fileID: 2541357706157807094, guid: 5877eb299ec8b9849a17b460e9cca154, type: 3}
+      propertyPath: m_text
+      value: Round Name
+      objectReference: {fileID: 0}
+    - target: {fileID: 2541357706157807094, guid: 5877eb299ec8b9849a17b460e9cca154, type: 3}
+      propertyPath: m_fontSize
+      value: 48.45
+      objectReference: {fileID: 0}
     - target: {fileID: 4389181351714705036, guid: 5877eb299ec8b9849a17b460e9cca154, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.10998811

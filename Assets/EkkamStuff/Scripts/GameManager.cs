@@ -19,9 +19,13 @@ public class GameManager : MonoBehaviour
     LevelManager levelManager;
     public bool loadingLevel = false;
 
+    public List<string> levelNames = new List<string>();
+    public int currentLevelIndex = 0;
+
     public RectTransform[] blackPanels;
     public RectTransform countdownText;
     public TMP_Text modeText;
+    public TMP_Text roundNameText;
     public GameObject lobbyPanel;
     public GameObject roundEndPanel;
     public TMP_Text roundEndText;
@@ -37,6 +41,7 @@ public class GameManager : MonoBehaviour
             player.UpdateReadyText();
             player.readyText.gameObject.SetActive(true);
         }
+        roundNameText.text = levelNames[currentLevelIndex];
         print("GameManager - Start");
     }
 
@@ -268,7 +273,7 @@ public class GameManager : MonoBehaviour
             if (player == null) continue;
             player.readyText.gameObject.SetActive(false);
         }
-        Invoke("LoadRandomLevel", 2f);
+        Invoke("LoadSelectedLevel", 2f);
     }
 
     public async void EndRound()
@@ -365,20 +370,16 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene("Lobby");
     }
 
-    void LoadRandomLevel()
+    void LoadSelectedLevel()
     {
-        int randomLevel = Random.Range(0, 2);
-        switch (randomLevel)
+        if (levelNames[currentLevelIndex] == "Crumbly Bois")
         {
-            case 0:
-                SceneManager.LoadScene("HexagonLevel");
-                break;
-            case 1:
-                SceneManager.LoadScene("LakshyaScene");
-                break;
-            default:
-                break;
+            SceneManager.LoadScene("HexagonLevel");
         }
+        else if (levelNames[currentLevelIndex] == "Spinny Bois")
+        {
+            SceneManager.LoadScene("LakshyaScene");
+        } 
     }
 
     void SendAllPlayersToSpawn()
@@ -510,6 +511,26 @@ public class GameManager : MonoBehaviour
                 players[i].ChangePlayerColor(playerColors[i]);
             }
         }
+    }
+
+    public void CycleNextRoundName()
+    {
+        currentLevelIndex++;
+        if (currentLevelIndex >= levelNames.Count)
+        {
+            currentLevelIndex = 0;
+        }
+        roundNameText.text = levelNames[currentLevelIndex];
+    }
+
+    public void CyclePreviousRoundName()
+    {
+        currentLevelIndex--;
+        if (currentLevelIndex < 0)
+        {
+            currentLevelIndex = levelNames.Count - 1;
+        }
+        roundNameText.text = levelNames[currentLevelIndex];
     }
 
     void OnApplicationQuit() {

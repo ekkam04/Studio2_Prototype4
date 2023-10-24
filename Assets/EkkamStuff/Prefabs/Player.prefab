@@ -13235,6 +13235,8 @@ MonoBehaviour:
   jumpDuration: 0.35
   downwardsGravityMultiplier: 1
   readyText: {fileID: 1924219046034215683}
+  preset1: {fileID: 5633532653935156491}
+  preset2: {fileID: 7780928775822793942}
 --- !u!114 &8661638855356403314
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13312,6 +13314,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: b0d3bf91-7717-4b61-933d-32fefea6399f
     m_ActionName: Player/Leave[/Keyboard/backspace,/XInputControllerWindows1/buttonEast,/XInputControllerWindows2/buttonEast,/XInputControllerWindows/buttonEast]
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 5367838957016132498}
+        m_TargetAssemblyTypeName: Player, Assembly-CSharp
+        m_MethodName: OnCyclePresets
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 733b711b-fdc0-4dc0-a2db-89eb8954d0b6
+    m_ActionName: Player/CyclePresets[/XInputControllerWindows/buttonNorth,/XInputControllerWindows1/buttonNorth,/XInputControllerWindows2/buttonNorth,/Keyboard/shift]
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player

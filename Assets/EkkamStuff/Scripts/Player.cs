@@ -44,6 +44,9 @@ public class Player : MonoBehaviour
 
     public TMP_Text readyText;
 
+    public GameObject preset1;
+    public GameObject preset2;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -181,6 +184,15 @@ public class Player : MonoBehaviour
         }
     }
 
+
+    public void OnCyclePresets(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            if (GameManager.instance.lobbyPanel.activeSelf) CyclePresets();
+        }
+    }
+
     void MovePlayer()
     {
         if (!allowMovement) return;
@@ -240,6 +252,7 @@ public class Player : MonoBehaviour
         allowMovement = false;
         isEliminated = true;
         rb.velocity = Vector3.zero;
+        RumbleManager.instance.StopContinuousRumble(GetComponent<PlayerInput>().devices[0] as Gamepad);
     }
 
     public void ToggleReady()
@@ -277,6 +290,20 @@ public class Player : MonoBehaviour
                 playerMaterial.SetColor("_Color02", color);
                 playerMaterial.SetColor("_Color03", color);
             }
+        }
+    }
+
+    void CyclePresets()
+    {
+        if (preset1.activeSelf)
+        {
+            preset1.SetActive(false);
+            preset2.SetActive(true);
+        }
+        else if (preset2.activeSelf)
+        {
+            preset2.SetActive(false);
+            preset1.SetActive(true);
         }
     }
 }

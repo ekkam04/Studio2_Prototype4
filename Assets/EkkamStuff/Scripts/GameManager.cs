@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using TMPro;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -43,6 +44,16 @@ public class GameManager : MonoBehaviour
         }
         roundNameText.text = levelNames[currentLevelIndex];
         print("GameManager - Start");
+
+        // disable buttons from being focused with controller
+        Button[] buttons = FindObjectsOfType<Button>();
+        if (buttons != null)
+        {
+            foreach (Button button in buttons)
+            {
+                button.navigation = new Navigation() { mode = Navigation.Mode.None };
+            }
+        }
     }
 
     // void Update()
@@ -145,6 +156,7 @@ public class GameManager : MonoBehaviour
         HideBlackPanels();
         roundEndPanel.SetActive(false);
         loadingLevel = false;
+        RumbleManager.instance.StopAllRumble();
 
         if (GameObject.Find("LevelManager") != null)
         {
@@ -531,6 +543,11 @@ public class GameManager : MonoBehaviour
             currentLevelIndex = levelNames.Count - 1;
         }
         roundNameText.text = levelNames[currentLevelIndex];
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit();
     }
 
     void OnApplicationQuit() {
